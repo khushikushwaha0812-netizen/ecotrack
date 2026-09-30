@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EcoTrack</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/app.css"></head><body><div id="toast" class="toast"></div>
+<nav class="navbar"><a href="/" class="logo">🌱 EcoTrack</a><div class="links"><span id="hi" style="color:#fff"></span><a href="/awareness.html">Awareness</a><a href="#" onclick="logout()">Logout</a></div></nav>
+<div class="wrap"><div class="tabs" id="tabs"></div>
+<div class="box" id="t-report"><h3>Report Waste Issue</h3><form id="fr"><label>Issue type</label><select name="category"></select>
+<label>Description</label><textarea name="description" required></textarea><label>Location</label><input name="location" id="loc" placeholder="Street, area, landmark" required>
+<button type="button" onclick="gps()" class="sm">📍 Use my GPS</button><label>Photo (optional, max 3MB)</label><input type="file" name="image" accept="image/*"><button>Submit complaint</button></form></div>
+<div class="box" id="t-mine"><h3>My Complaints</h3><div class="row"><input id="q" placeholder="Search..."><select id="sf"></select><select id="cf"></select></div><div id="list"></div></div>
+<div class="box" id="t-pick"><h3>Request Waste Pickup</h3><form id="fp"><div class="row"><div><label>Waste type</label><select name="waste_type"></select></div><div><label>Contact</label><input name="contact" required></div></div>
+<label>Address</label><input name="address" required><div class="row"><div><label>Date</label><input type="date" name="pdate" required></div><div><label>Time</label><input type="time" name="ptime" required></div></div>
+<label>Description</label><textarea name="description"></textarea><label>Image (optional)</label><input type="file" name="image" accept="image/*"><button>Request pickup</button></form></div>
+<div class="box" id="t-pl"><h3>My Pickups</h3><div id="plist"></div></div>
+<div class="box" id="t-ai"><h3>🤖 Waste Assistant</h3><div class="chat" id="chat"><p>Hi! Ask me about wet waste, plastic, e-waste, or reporting.</p></div><div class="row"><input id="msg" placeholder="Type a question"><button class="sm" onclick="ask()">Send</button></div></div>
+<div class="box" id="t-prof"><h3>My Profile</h3><form id="fpr"><label>Name</label><input name="name" required><label>Phone</label><input name="phone"><p id="em" style="margin-top:8px"></p><button>Save</button></form></div></div>
+<script src="/js/app.js"></script><script>
+const T={report:'Report Waste',mine:'My Complaints',pick:'Pickup Request',pl:'My Pickups',ai:'Assistant',prof:'Profile'};
+$('#tabs').innerHTML=Object.entries(T).map(([k,v])=>`<button id="b-${k}" onclick="show('${k}')">${v}</button>`).join('');
+function show(k){Object.keys(T).forEach(x=>{$('#t-'+x).style.display=x===k?'block':'none';$('#b-'+x).className=x===k?'on':''});if(k==='mine')load();if(k==='pl')loadP();}
+document.querySelector('[name=category]').innerHTML=opts(CATS);document.querySelector('[name=waste_type]').innerHTML=opts(WT);
+$('#sf').innerHTML='<option value="">All status</option>'+opts(CST);$('#cf').innerHTML='<option value="">All types</option>'+opts(CATS);
+api('/api/me').then(u=>{if(u.role!=='CITIZEN')location='/admin.html';$('#hi').textContent='Hi, '+u.name;$('#fpr').name.value=u.name;$('#fpr').phone.value=u.phone||'';$('#em').textContent=u.email;}).catch(()=>location='/login.html');
+function gps(){navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>$('#loc').value=p.coords.latitude.toFixed(5)+','+p.coords.longitude.toFixed(5),()=>toast('Could not get location',1)):toast('GPS not supported',1)}
+async function send(url,form,label){try{const d=await api(url,{method:'POST',body:new FormData(form)});toast(label+' submitted! ID: '+(d.cid||d.pid));form.reset();show(d.cid?'mine':'pl');}catch(x){toast(x.message,1)}}
+$('#fr').onsubmit=e=>{e.preventDefault();send('/api/complaints',e.target,'Complaint')};
+$('#fp').onsubmit=e=>{e.preventDefault();send('/api/pickups',e.target,'Pickup')};
+async function load(){const p=new URLSearchParams({q:$('#q').value,status:$('#sf').value,category:$('#cf').value});
+ const r=await api('/api/complaints?'+p);$('#list').innerHTML=r.map(c=>`<div class="item"><b>${esc(c.cid)}</b> ${badge(c.status)}<br>${esc(c.category)} · ${mapLink(c.location)}<br><small>${esc(c.created)}</small><p>${esc(c.description)}</p>${timeline(c.status)}${c.remarks?'<p><b>Admin remarks:</b> '+esc(c.remarks)+'</p>':''}${c.image?'<img src="/uploads/'+esc(c.image)+'">':''}</div>`).join('')||'<p>No complaints found.</p>';}
+['q','sf','cf'].forEach(i=>$('#'+i).oninput=load);
+async function loadP(){const r=await api('/api/pickups');$('#plist').innerHTML=r.map(c=>`<div class="item"><b>${esc(c.pid)}</b> ${badge(c.status)}<br>${esc(c.waste_type)} · ${esc(c.address)}<br>${esc(c.pdate)} ${esc(c.ptime)}</div>`).join('')||'<p>No pickups yet.</p>';}
+async function ask(){const m=$('#msg').value.trim();if(!m)return;$('#chat').innerHTML+='<p><b>You:</b> '+esc(m)+'</p>';$('#msg').value='';
+ const d=await api('/api/assistant',jsonOpt('POST',{message:m}));$('#chat').innerHTML+='<p><b>🤖:</b> '+esc(d.reply)+'</p>';$('#chat').scrollTop=9e5;}
+$('#fpr').onsubmit=async e=>{e.preventDefault();try{await api('/api/me',jsonOpt('PUT',{name:e.target.name.value,phone:e.target.phone.value}));toast('Profile updated')}catch(x){toast(x.message,1)}};
+show('report');
+</script></body></html>

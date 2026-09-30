@@ -1,0 +1,6 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EcoTrack</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/app.css"></head><body><div id="toast" class="toast"></div><nav class="navbar"><a href="/" class="logo">🌱 EcoTrack</a><div class="links"><a href="/">Home</a><a href="/awareness.html">Awareness</a><a href="/login.html">Login</a><a href="/register.html">Register</a></div></nav>
+<div class="box small"><h2>Login</h2><form id="f"><label>Email</label><input name="email" type="email" required><label>Password</label><input name="password" type="password" required><button>Login</button></form>
+<p style="margin-top:10px">New here? <a href="/register.html">Register</a></p><p style="font-size:12px;color:#666">Admin demo: admin@ecotrack.com / Admin@123</p></div>
+<script src="/js/app.js"></script><script>
+$('#f').onsubmit=async e=>{e.preventDefault();try{const d=await api('/api/login',jsonOpt('POST',Object.fromEntries(new FormData(e.target))));location=d.role==='ADMIN'?'/admin.html':'/dashboard.html';}catch(x){toast(x.message,1)}};
+</script></body></html>

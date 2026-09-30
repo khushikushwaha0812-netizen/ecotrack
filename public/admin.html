@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EcoTrack</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/app.css"></head><body><div id="toast" class="toast"></div>
+<nav class="navbar"><a href="/" class="logo">🌱 EcoTrack Admin</a><div class="links"><a href="#" onclick="logout()">Logout</a></div></nav>
+<div class="wrap"><div class="stats" id="stats"></div>
+<div class="row"><div class="box"><h3>Complaints by status</h3><div id="c1"></div></div><div class="box"><h3>Complaints by type</h3><div id="c2"></div></div></div>
+<div class="row"><div class="box"><h3>🔥 Hotspots</h3><div id="hot"></div></div><div class="box"><h3>Recent activity</h3><div id="rec"></div></div></div>
+<div class="box"><h3>Manage Complaints</h3><div class="row"><input id="q" placeholder="Search ID / text / location"><select id="sf"></select><select id="cf"></select></div><div class="tw"><table><thead><tr><th>ID / User</th><th>Issue</th><th>Location</th><th>Photo</th><th>Status &amp; remarks</th></tr></thead><tbody id="ct"></tbody></table></div></div>
+<div class="box"><h3>Manage Pickups</h3><div class="tw"><table><thead><tr><th>ID / User</th><th>Details</th><th>Status</th></tr></thead><tbody id="pt"></tbody></table></div></div>
+<div class="box"><h3>Users</h3><div class="tw"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th></tr></thead><tbody id="ut"></tbody></table></div></div></div>
+<script src="/js/app.js"></script><script>
+$('#sf').innerHTML='<option value="">All status</option>'+opts(CST);$('#cf').innerHTML='<option value="">All types</option>'+opts(CATS);
+const bars=a=>{const m=Math.max(1,...a.map(x=>x.n));return a.map(x=>`<div class="bar"><span style="width:130px">${esc(x.k)}</span><div style="width:${x.n/m*150}px"></div>${x.n}</div>`).join('')||'<p>No data</p>'};
+async function stats(){const s=await api('/api/admin/stats').catch(()=>location='/login.html');
+ const n=k=>(s.byStatus.find(x=>x.k===k)||{n:0}).n;
+ $('#stats').innerHTML=[['Users',s.users],['Complaints',s.complaints],['Pending',n('Pending')],['In Progress',n('In Progress')],['Resolved',n('Resolved')],['Rejected',n('Rejected')],['Pickups',s.pickups]].map(x=>`<div class="stat"><b>${x[1]}</b>${x[0]}</div>`).join('');
+ $('#c1').innerHTML=bars(s.byStatus);$('#c2').innerHTML=bars(s.byCategory);$('#hot').innerHTML=bars(s.hotspots);
+ $('#rec').innerHTML=s.recent.map(r=>`<p>${esc(r.cid)} · ${esc(r.category)} ${badge(r.status)}</p>`).join('')||'<p>Nothing yet</p>';}
+async function comps(){const p=new URLSearchParams({q:$('#q').value,status:$('#sf').value,category:$('#cf').value});const r=await api('/api/complaints?'+p);
+ $('#ct').innerHTML=r.map(c=>`<tr><td><b>${esc(c.cid)}</b><br>${esc(c.uname)}<br><small>${esc(c.created)}</small></td><td>${esc(c.category)}<br>${esc(c.description)}</td><td>${mapLink(c.location)}</td><td>${c.image?'<a target="_blank" href="/uploads/'+esc(c.image)+'"><img src="/uploads/'+esc(c.image)+'" width="70"></a>':'-'}</td>
+ <td><select id="s${c.id}">${opts(CST,c.status)}</select><input id="r${c.id}" placeholder="Remarks" value="${esc(c.remarks)}"><button class="sm" onclick="upd(${c.id})">Save</button></td></tr>`).join('')||'<tr><td colspan=5>No complaints</td></tr>';}
+async function upd(i){try{await api('/api/complaints/'+i,jsonOpt('PUT',{status:$('#s'+i).value,remarks:$('#r'+i).value}));toast('Complaint updated');stats();}catch(x){toast(x.message,1)}}
+async function picks(){const r=await api('/api/pickups');$('#pt').innerHTML=r.map(c=>`<tr><td><b>${esc(c.pid)}</b><br>${esc(c.uname)}</td><td>${esc(c.waste_type)} · ${esc(c.address)}<br>${esc(c.pdate)} ${esc(c.ptime)} · ${esc(c.contact)}<br>${esc(c.description)}</td>
+ <td><select id="p${c.id}">${opts(PST,c.status)}</select><button class="sm" onclick="updP(${c.id})">Save</button></td></tr>`).join('')||'<tr><td colspan=3>No pickups</td></tr>';}
+async function updP(i){try{await api('/api/pickups/'+i,jsonOpt('PUT',{status:$('#p'+i).value}));toast('Pickup updated')}catch(x){toast(x.message,1)}}
+async function users(){const r=await api('/api/admin/users');$('#ut').innerHTML=r.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.phone)}</td><td>${u.role}</td></tr>`).join('');}
+['q','sf','cf'].forEach(i=>$('#'+i).oninput=comps);stats();comps();picks();users();
+</script></body></html>

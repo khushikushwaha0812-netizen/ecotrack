@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register - EcoTrack</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="box">
+    <h2>🌱 Create Account</h2>
+    <input id="name" placeholder="Full name">
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password (min 6 characters)">
+    <button onclick="register()">Register</button>
+    <p id="msg"></p>
+    <p>Already have an account? <a href="login.html">Login</a></p>
+  </div>
+
+  <script>
+    async function register() {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      const msg = document.getElementById('msg');
+      if (res.ok) {
+        msg.style.color = 'green';
+        msg.textContent = 'Registered! Redirecting to login...';
+        setTimeout(() => location.href = 'login.html', 1500);
+      } else {
+        msg.style.color = 'red';
+        msg.textContent = data.error;
+      }
+    }
+  </script>
+</body>
+</html>
